@@ -46,10 +46,6 @@ namespace GnomiumMod
                 cameraModule,
                 outfitModule,
                 ready: () => playerActor != null && mainCamera != null,
-                health: () => currentHealth,
-                velocity: () => currentVelocity,
-                speedAllGetter: () => speedAll,
-                speedAllSetter: (v) => speedAll = v,
                 baseSpeedGetter: () => baseSpeed,
                 baseSpeedSetter: (v) => baseSpeed = v,
                 boostSpeedGetter: () => boostedSpeed,
@@ -99,15 +95,7 @@ namespace GnomiumMod
                 HandleHotkeysNonUI();
 
                 // Velocidad
-                if (speedAll)
-                {
-                    float speed = Input.GetKey(KeyCode.LeftShift) ? boostedSpeed : baseSpeed;
-                    ApplySpeedToAllActors(speed);
-                }
-                else
-                {
-                    ApplyLocalSpeedFromInput();
-                }
+                ApplyLocalSpeedFromInput();
 
                 UpdatePlayerStats();
             }
@@ -176,13 +164,6 @@ namespace GnomiumMod
             {
                 cameraModule.ToggleThirdPerson();
                 cameraModule.ForceHeadVisible(cameraModule.ThirdPersonEnabled, playerActor);
-            }
-
-            // Speed ALL toggle
-            if (Input.GetKeyDown(KeyCode.F8))
-            {
-                speedAll = !speedAll;
-                MelonLogger.Msg($"[{MOD_NAME}] 🌍 Speed ALL: {(speedAll ? "ON" : "OFF")}");
             }
         }
 

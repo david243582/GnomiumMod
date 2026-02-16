@@ -198,7 +198,7 @@ namespace GnomiumMod
 
             headR.SetPropertyBlock(mpb, clothesMatIndex);
 
-            MelonLogger.Msg($"[HAT] Tint aplicado a Head='{headR.name}' matIndex={clothesMatIndex} mat='{mats[clothesMatIndex]?.name}'");
+            //MelonLogger.Msg($"[HAT] Tint aplicado a Head='{headR.name}' matIndex={clothesMatIndex} mat='{mats[clothesMatIndex]?.name}'");
             return true;
         }
 
