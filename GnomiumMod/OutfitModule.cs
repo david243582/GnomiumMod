@@ -1,5 +1,4 @@
-﻿// OutfitModule.cs
-using Lightbug.CharacterControllerPro.Core;
+﻿using Lightbug.CharacterControllerPro.Core;
 using MelonLoader;
 using System;
 using System.Collections.Generic;
@@ -17,10 +16,7 @@ namespace GnomiumMod
         private readonly MaterialPropertyBlock mpb = new MaterialPropertyBlock();
         private bool cached;
 
-        // Config
         public bool Enabled { get; set; } = true;
-
-        // Si true, filtra por keywords (ropa). Si false, pinta todo.
         public bool OnlyClothes { get; set; } = true;
 
         public readonly HashSet<string> IncludeKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -35,11 +31,11 @@ namespace GnomiumMod
             "body","skin","face","head","eye","eyes","hair","teeth","tongue"
         };
 
-        // Shader props comunes
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int ColorId = Shader.PropertyToID("_Color");
-        private static readonly int TintId = Shader.PropertyToID("_TintColor");
-        private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
+        // Shader props
+        internal static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        internal static readonly int ColorId = Shader.PropertyToID("_Color");
+        internal static readonly int TintId = Shader.PropertyToID("_TintColor");
+        internal static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         // ----------------------------
         // Public API
@@ -141,6 +137,71 @@ namespace GnomiumMod
             }
         }
 
+        /// <summary>
+        /// Cambia el color del gorro/ropa que está dentro del renderer de la cabeza
+        /// usando property blocks por sub-material (submesh).
+        /// </summary>
+        public bool TryTintHat(Color tint, bool alsoEmission = false)
+        {
+            if (actor == null) return false;
+
+            var headR = actor.GetComponentsInChildren<Renderer>(true)
+                .FirstOrDefault(r => (r.name ?? "").IndexOf("Head.001", StringComparison.OrdinalIgnoreCase) >= 0
+                                  || (r.name ?? "").IndexOf("Head", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (headR == null)
+            {
+                MelonLogger.Msg("[HAT] No se encontró renderer Head");
+                return false;
+            }
+
+            var mats = headR.sharedMaterials;
+            if (mats == null || mats.Length == 0)
+            {
+                MelonLogger.Msg("[HAT] Head sin materiales");
+                return false;
+            }
+
+            int clothesMatIndex = -1;
+
+            for (int i = 0; i < mats.Length; i++)
+            {
+                var m = mats[i];
+                if (m == null) continue;
+
+                string mn = (m.name ?? "").ToLowerInvariant();
+                string sn = (m.shader ? m.shader.name : "").ToLowerInvariant();
+
+                // En tu dump: "Clothes (Instance)"
+                if (mn.Contains("clothes") || mn.Contains("cloth") || mn.Contains("hat") || mn.Contains("cap") || sn.Contains("cloth"))
+                {
+                    clothesMatIndex = i;
+                    break;
+                }
+            }
+
+            if (clothesMatIndex < 0)
+            {
+                MelonLogger.Msg("[HAT] No se encontró material de ropa en Head (clothes/cloth/hat/cap)");
+                return false;
+            }
+
+            // PropertyBlock por submesh
+            headR.GetPropertyBlock(mpb, clothesMatIndex);
+
+            if (RendererHasProp(headR, BaseColorId)) mpb.SetColor(BaseColorId, tint);
+            if (RendererHasProp(headR, ColorId)) mpb.SetColor(ColorId, tint);
+            if (RendererHasProp(headR, TintId)) mpb.SetColor(TintId, tint);
+
+            if (alsoEmission && RendererHasProp(headR, EmissionId))
+                mpb.SetColor(EmissionId, tint);
+
+            headR.SetPropertyBlock(mpb, clothesMatIndex);
+
+            MelonLogger.Msg($"[HAT] Tint aplicado a Head='{headR.name}' matIndex={clothesMatIndex} mat='{mats[clothesMatIndex]?.name}'");
+            return true;
+        }
+
         // ----------------------------
         // Internals
         // ----------------------------
@@ -205,68 +266,5 @@ namespace GnomiumMod
             parts.Reverse();
             return string.Join("/", parts);
         }
-
-        public bool TryTintHat(Color tint, bool alsoEmission = false)
-        {
-            if (actor == null) return false;
-
-            // 1) Busca el renderer de la cabeza
-            var headR = actor.GetComponentsInChildren<Renderer>(true)
-                .FirstOrDefault(r => (r.name ?? "").IndexOf("Head.001", StringComparison.OrdinalIgnoreCase) >= 0
-                                  || (r.name ?? "").IndexOf("Head", StringComparison.OrdinalIgnoreCase) >= 0);
-
-            if (headR == null)
-            {
-                MelonLogger.Msg("[HAT] No se encontró renderer Head");
-                return false;
-            }
-
-            // 2) Busca en sus materiales uno que huela a ropa
-            var mats = headR.sharedMaterials;
-            if (mats == null || mats.Length == 0)
-            {
-                MelonLogger.Msg("[HAT] Head sin materiales");
-                return false;
-            }
-
-            int clothesMatIndex = -1;
-            for (int i = 0; i < mats.Length; i++)
-            {
-                var m = mats[i];
-                if (m == null) continue;
-
-                string mn = (m.name ?? "").ToLowerInvariant();
-                string sn = (m.shader ? m.shader.name : "").ToLowerInvariant();
-
-                // En tu dump aparece: "Clothes (Instance)"
-                if (mn.Contains("clothes") || mn.Contains("cloth") || mn.Contains("hat") || mn.Contains("cap") || sn.Contains("cloth"))
-                {
-                    clothesMatIndex = i;
-                    break;
-                }
-            }
-
-            if (clothesMatIndex < 0)
-            {
-                MelonLogger.Msg("[HAT] No se encontró material de ropa en Head (busqué clothes/cloth/hat/cap)");
-                return false;
-            }
-
-            // 3) Aplica SOLO a ese sub-material, usando property blocks por submesh
-            headR.GetPropertyBlock(mpb, clothesMatIndex);
-
-            if (RendererHasProp(headR, BaseColorId)) mpb.SetColor(BaseColorId, tint);
-            if (RendererHasProp(headR, ColorId)) mpb.SetColor(ColorId, tint);
-            if (RendererHasProp(headR, TintId)) mpb.SetColor(TintId, tint);
-
-            if (alsoEmission && RendererHasProp(headR, EmissionId))
-                mpb.SetColor(EmissionId, tint);
-
-            headR.SetPropertyBlock(mpb, clothesMatIndex);
-
-            MelonLogger.Msg($"[HAT] Tint aplicado a Head='{headR.name}' matIndex={clothesMatIndex} mat='{mats[clothesMatIndex]?.name}'");
-            return true;
-        }
-
     }
 }

@@ -1,5 +1,4 @@
-﻿// Utilities/ModDebug.cs
-using Lightbug.CharacterControllerPro.Core;
+﻿using Lightbug.CharacterControllerPro.Core;
 using MelonLoader;
 using System;
 using System.Linq;
@@ -49,7 +48,6 @@ namespace GnomiumMod.Utilities
                     bestRoot = r.transform.root;
                 }
             }
-
             return bestRoot;
         }
 

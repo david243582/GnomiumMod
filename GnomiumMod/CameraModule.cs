@@ -1,5 +1,4 @@
-﻿// CameraModule.cs
-using Lightbug.CharacterControllerPro.Core;
+﻿using Lightbug.CharacterControllerPro.Core;
 using MelonLoader;
 using System;
 using System.Collections.Generic;
@@ -16,15 +15,13 @@ namespace GnomiumMod
 
         public bool ThirdPersonEnabled { get; private set; }
 
-        // -----------------------------
-        // Config cámara (TPS)
-        // -----------------------------
+        // TPS config
         public float CamHeight = 1.5f;
         public float CamDistance = -3.5f; // negativo = atrás
         public float CamYaw = 0f;
         public float MouseSensitivity = 1.5f;
 
-        // Zoom con rueda
+        // Zoom
         public float ZoomStep = 0.2f;
         public float MinZoomAbs = 1.5f;
         public float MaxZoomAbs = 4.5f;
@@ -39,42 +36,32 @@ namespace GnomiumMod
         private Vector3 fpsLocalPos;
         private Quaternion fpsLocalRot;
 
-        // Drivers (CinemachineBrain etc.)
+        // Drivers
         private readonly List<Behaviour> cameraDrivers = new List<Behaviour>();
         private bool driversCached;
 
-        // -----------------------------
-        // Colisión “PRO”
-        // -----------------------------
+        // Collision “PRO”
         public float MinDistanceAbs = 0.9f;
-
         public float SphereRadius = 0.22f;
         public float CollisionBuffer = 0.20f;
 
-        // Suavizado
         public float ZoomInSmoothTime = 0.04f;
         public float ZoomOutSmoothTime = 0.12f;
 
-        // Debounce colisión
         public int OverlapFramesToEngage = 3;
         private int overlapFrames;
 
-        // Ignorar props pequeños
         public float MinObstacleSize = 1.2f;
-
         public LayerMask CollisionMask = ~0;
 
         private float currentCamDistAbs = 3.5f;
         private float distVel;
 
-        // Cache colliders del jugador
         private readonly List<Collider> actorColliders = new List<Collider>();
         private bool actorCollidersCached;
 
-        // Buffer OverlapSphere
         private readonly Collider[] overlapBuf = new Collider[32];
 
-        // Head visibility backup
         private ShadowCastingMode headBackupMode = ShadowCastingMode.ShadowsOnly;
         private bool headModeSaved;
 
@@ -84,8 +71,8 @@ namespace GnomiumMod
         public void SetActor(PhysicsActor a)
         {
             if (actor == a) return;
-
             actor = a;
+
             actorCollidersCached = false;
             RefreshActorColliders();
             actorCollidersCached = true;
@@ -102,7 +89,6 @@ namespace GnomiumMod
                 driversCached = true;
             }
 
-            // init distancia suavizada al zoom actual
             SyncSmoothedDistanceToZoom();
         }
 
@@ -135,21 +121,18 @@ namespace GnomiumMod
             if (!ThirdPersonEnabled) return;
             if (actor == null || cam == null) return;
 
-            // Pitch
             mouseY -= Input.GetAxis("Mouse Y") * MouseSensitivity;
             mouseY = Mathf.Clamp(mouseY, -35f, 80f);
 
-            // Zoom
             float scroll = Input.GetAxis("Mouse ScrollWheel");
             if (Mathf.Abs(scroll) > 0.0001f)
             {
                 if (InvertScroll) scroll = -scroll;
 
                 float abs = Mathf.Abs(CamDistance);
-                abs -= scroll * ZoomStep * 10f; // ScrollWheel es pequeño
+                abs -= scroll * ZoomStep * 10f;
                 abs = Mathf.Clamp(abs, MinZoomAbs, MaxZoomAbs);
-
-                CamDistance = -abs; // mantener atrás
+                CamDistance = -abs;
             }
         }
 
@@ -246,7 +229,6 @@ namespace GnomiumMod
             foreach (var comp in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
             {
                 if (comp == null) continue;
-
                 var full = comp.GetType().FullName ?? "";
                 if (full.Contains("CinemachineBrain") && comp is Behaviour b)
                     cameraDrivers.Add(b);
